@@ -101,3 +101,45 @@ variable "project_name" {
     error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
   }
 }
+
+# ==============================================================================
+# Phase 3: EC2 Instance Variables (User Story 1)
+# ==============================================================================
+
+# EC2 Instance Type
+variable "instance_type" {
+  description = "EC2 instance type for nginx web servers"
+  type        = string
+  default     = "t3.micro"
+
+  validation {
+    condition     = can(regex("^[a-z][0-9][a-z]?\\.(nano|micro|small|medium|large|xlarge|[0-9]+xlarge)$", var.instance_type))
+    error_message = "Instance type must be a valid EC2 instance type (e.g., t3.micro, t3.small)."
+  }
+}
+
+# AMI ID (optional - data source used if not provided)
+variable "ami_id" {
+  description = "AMI ID for EC2 instances (defaults to latest Amazon Linux 2023 if not specified)"
+  type        = string
+  default     = ""
+}
+
+# SSH Key Name
+variable "key_name" {
+  description = "EC2 key pair name for SSH access (optional)"
+  type        = string
+  default     = ""
+}
+
+# Instance Count
+variable "instance_count" {
+  description = "Number of EC2 instances to create"
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.instance_count >= 1 && var.instance_count <= 10
+    error_message = "Instance count must be between 1 and 10."
+  }
+}

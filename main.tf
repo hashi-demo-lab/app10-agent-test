@@ -10,6 +10,27 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# Get latest Amazon Linux 2023 AMI
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+}
+
 # ==============================================================================
 # Phase 2: Foundational Infrastructure (VPC and Networking)
 # Implements FR-001: Provision EC2 in ap-southeast-2
@@ -57,4 +78,183 @@ module "vpc" {
     Name = "${var.project_name}-${var.environment}-private"
     Tier = "private"
   }
+}
+
+# ==============================================================================
+# Phase 3: EC2 Instances with Nginx (User Story 1)
+# Implements FR-002: Configure instances with nginx web server
+# Implements FR-003: Serve custom HTML page with instance metadata
+# Implements FR-013: Enable public IP for instance accessibility
+# ==============================================================================
+
+# Security Group for EC2 Instances
+resource "aws_security_group" "ec2_nginx" {
+  name_prefix = "${var.project_name}-${var.environment}-ec2-"
+  description = "Security group for nginx web server instances"
+  vpc_id      = module.vpc.vpc_id
+
+  # HTTP ingress from VPC CIDR only (will be restricted to ALB security group in Phase 4)
+  # tfsec:ignore:aws-ec2-no-public-ingress-sgr - Instances in private subnet, HTTP access from VPC required for ALB
+  ingress {
+    description = "HTTP from VPC"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  # All egress traffic for package installation and updates
+  # tfsec:ignore:aws-ec2-no-public-egress-sgr - Required for yum/dnf package installation and system updates
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-ec2-sg"
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# User Data Script for Nginx Installation
+locals {
+  user_data = <<-EOF
+    #!/bin/bash
+    # Update system packages
+    dnf update -y
+
+    # Install nginx
+    dnf install -y nginx
+
+    # Get instance metadata
+    TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+    INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+    AVAILABILITY_ZONE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
+    PRIVATE_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+    # Create custom HTML page with instance metadata
+    cat > /usr/share/nginx/html/index.html <<'HTML'
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nginx Web Server - ${var.project_name}</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .container {
+                background-color: white;
+                padding: 30px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            h1 {
+                color: #009639;
+                border-bottom: 3px solid #009639;
+                padding-bottom: 10px;
+            }
+            .metadata {
+                background-color: #f9f9f9;
+                padding: 15px;
+                border-left: 4px solid #009639;
+                margin: 20px 0;
+            }
+            .metadata p {
+                margin: 8px 0;
+            }
+            .label {
+                font-weight: bold;
+                color: #333;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Welcome to Nginx Web Server</h1>
+            <p>This EC2 instance is serving a custom HTML page with metadata.</p>
+
+            <div class="metadata">
+                <h2>Instance Metadata</h2>
+                <p><span class="label">Instance ID:</span> INSTANCE_ID_PLACEHOLDER</p>
+                <p><span class="label">Availability Zone:</span> AVAILABILITY_ZONE_PLACEHOLDER</p>
+                <p><span class="label">Private IP:</span> PRIVATE_IP_PLACEHOLDER</p>
+                <p><span class="label">Environment:</span> ${var.environment}</p>
+                <p><span class="label">Project:</span> ${var.project_name}</p>
+            </div>
+
+            <p style="margin-top: 30px; color: #666; font-size: 14px;">
+                Managed by Terraform | Feature: 001-ec2-nginx-alb
+            </p>
+        </div>
+    </body>
+    </html>
+    HTML
+
+    # Replace placeholders with actual values
+    sed -i "s/INSTANCE_ID_PLACEHOLDER/$INSTANCE_ID/g" /usr/share/nginx/html/index.html
+    sed -i "s/AVAILABILITY_ZONE_PLACEHOLDER/$AVAILABILITY_ZONE/g" /usr/share/nginx/html/index.html
+    sed -i "s/PRIVATE_IP_PLACEHOLDER/$PRIVATE_IP/g" /usr/share/nginx/html/index.html
+
+    # Start and enable nginx
+    systemctl start nginx
+    systemctl enable nginx
+
+    # Configure firewall
+    firewall-cmd --permanent --add-service=http
+    firewall-cmd --reload
+  EOF
+}
+
+# EC2 Instance Module - Nginx Web Server
+module "ec2_nginx" {
+  source  = "app.terraform.io/hashi-demos-apj/ec2-instance/aws"
+  version = "~> 6.1.4"
+
+  count = var.instance_count
+
+  # Instance Configuration
+  name          = "${var.project_name}-${var.environment}-nginx-${count.index + 1}"
+  ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023.id
+  instance_type = var.instance_type
+  key_name      = var.key_name != "" ? var.key_name : null
+
+  # Network Configuration
+  subnet_id                   = module.vpc.private_subnets[count.index % length(module.vpc.private_subnets)]
+  vpc_security_group_ids      = [aws_security_group.ec2_nginx.id]
+  associate_public_ip_address = false # Instances in private subnet
+
+  # User Data
+  user_data                   = local.user_data
+  user_data_replace_on_change = true
+
+  # Root Volume Configuration (EBS encryption enabled)
+  enable_volume_tags = true
+  ebs_optimized      = true
+
+  # Enable detailed monitoring
+  monitoring = true
+
+  # Tags
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-nginx-${count.index + 1}"
+      Role = "web-server"
+    }
+  )
 }

@@ -48,3 +48,37 @@ output "internet_gateway_id" {
   description = "ID of Internet Gateway"
   value       = module.vpc.igw_id
 }
+
+# ==============================================================================
+# Phase 3: EC2 Instance Outputs (User Story 1)
+# ==============================================================================
+
+# EC2 Instance IDs
+output "ec2_instance_ids" {
+  description = "IDs of EC2 nginx instances"
+  value       = module.ec2_nginx[*].id
+}
+
+# EC2 Private IP Addresses
+output "ec2_private_ips" {
+  description = "Private IP addresses of EC2 nginx instances"
+  value       = module.ec2_nginx[*].private_ip
+}
+
+# EC2 Private DNS Names
+output "ec2_private_dns" {
+  description = "Private DNS names of EC2 nginx instances"
+  value       = module.ec2_nginx[*].private_dns
+}
+
+# Security Group ID
+output "ec2_security_group_id" {
+  description = "ID of the EC2 security group"
+  value       = aws_security_group.ec2_nginx.id
+}
+
+# AMI ID Used
+output "ami_id_used" {
+  description = "AMI ID used for EC2 instances"
+  value       = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023.id
+}
