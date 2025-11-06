@@ -81,6 +81,49 @@ module "vpc" {
 }
 
 # ==============================================================================
+# Phase 4: Application Load Balancer Security Group
+# Defined early to allow EC2 security group to reference it
+# Implements FR-005: Configure ALB for load distribution
+# ==============================================================================
+
+# Security Group for Application Load Balancer
+resource "aws_security_group" "alb" {
+  name_prefix = "${var.project_name}-${var.environment}-alb-"
+  description = "Security group for Application Load Balancer"
+  vpc_id      = module.vpc.vpc_id
+
+  # HTTP ingress from internet (internet-facing ALB)
+  # tfsec:ignore:aws-ec2-no-public-ingress-sgr - Internet-facing ALB requires public HTTP access
+  ingress {
+    description = "HTTP from internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Egress to VPC on HTTP (targets EC2 nginx instances)
+  egress {
+    description = "HTTP to VPC (EC2 nginx instances)"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-alb-sg"
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ==============================================================================
 # Phase 3: EC2 Instances with Nginx (User Story 1)
 # Implements FR-002: Configure instances with nginx web server
 # Implements FR-003: Serve custom HTML page with instance metadata
@@ -93,14 +136,13 @@ resource "aws_security_group" "ec2_nginx" {
   description = "Security group for nginx web server instances"
   vpc_id      = module.vpc.vpc_id
 
-  # HTTP ingress from VPC CIDR only (will be restricted to ALB security group in Phase 4)
-  # tfsec:ignore:aws-ec2-no-public-ingress-sgr - Instances in private subnet, HTTP access from VPC required for ALB
+  # HTTP ingress from ALB security group only
   ingress {
-    description = "HTTP from VPC"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+    description     = "HTTP from ALB"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
   # All egress traffic for package installation and updates
@@ -255,6 +297,90 @@ module "ec2_nginx" {
     {
       Name = "${var.project_name}-${var.environment}-nginx-${count.index + 1}"
       Role = "web-server"
+    }
+  )
+}
+
+# ==============================================================================
+# Phase 4: Application Load Balancer (User Story 2)
+# Implements FR-005: Configure ALB for load distribution
+# Implements FR-006: Deploy across at least 2 availability zones
+# Implements FR-007: Configure health checks with appropriate thresholds
+# Implements FR-014: Output ALB DNS endpoint
+# ==============================================================================
+
+# Application Load Balancer Module
+module "alb" {
+  source  = "app.terraform.io/hashi-demos-apj/alb/aws"
+  version = "~> 10.1.0"
+
+  # ALB Configuration
+  name               = "${var.project_name}-${var.environment}"
+  load_balancer_type = "application"
+  internal           = var.alb_internal
+  vpc_id             = module.vpc.vpc_id
+  subnets            = module.vpc.public_subnets
+  security_groups    = [aws_security_group.alb.id]
+
+  # Enable deletion protection for production (disabled for sandbox)
+  enable_deletion_protection = var.environment == "prod" ? true : false
+
+  # Target Group Configuration
+  target_groups = {
+    nginx = {
+      name_prefix      = "nginx-"
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+
+      health_check = {
+        enabled             = true
+        path                = var.health_check_path
+        port                = "traffic-port"
+        protocol            = "HTTP"
+        interval            = var.health_check_interval
+        timeout             = var.health_check_timeout
+        healthy_threshold   = var.health_check_healthy_threshold
+        unhealthy_threshold = var.health_check_unhealthy_threshold
+        matcher             = "200"
+      }
+
+      # Deregistration delay
+      deregistration_delay = var.deregistration_delay
+
+      # Stickiness disabled by default
+      stickiness = {
+        enabled = false
+        type    = "lb_cookie"
+      }
+
+      # Attach EC2 instances as targets
+      targets = {
+        for idx, instance in module.ec2_nginx : "nginx-${idx}" => {
+          target_id = instance.id
+          port      = 80
+        }
+      }
+    }
+  }
+
+  # HTTP Listener
+  listeners = {
+    http = {
+      port     = 80
+      protocol = "HTTP"
+
+      forward = {
+        target_group_key = "nginx"
+      }
+    }
+  }
+
+  # Tags
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-alb"
     }
   )
 }

@@ -143,3 +143,77 @@ variable "instance_count" {
     error_message = "Instance count must be between 1 and 10."
   }
 }
+
+# ==============================================================================
+# Phase 4: Application Load Balancer Variables (User Story 2)
+# ==============================================================================
+
+# ALB Configuration
+variable "alb_internal" {
+  description = "Whether the ALB is internal (true) or internet-facing (false)"
+  type        = bool
+  default     = false
+}
+
+# Health Check Configuration
+variable "health_check_path" {
+  description = "Path for ALB health check"
+  type        = string
+  default     = "/"
+}
+
+variable "health_check_interval" {
+  description = "Interval between health checks (seconds)"
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.health_check_interval >= 5 && var.health_check_interval <= 300
+    error_message = "Health check interval must be between 5 and 300 seconds."
+  }
+}
+
+variable "health_check_timeout" {
+  description = "Timeout for health check (seconds)"
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.health_check_timeout >= 2 && var.health_check_timeout <= 120
+    error_message = "Health check timeout must be between 2 and 120 seconds."
+  }
+}
+
+variable "health_check_healthy_threshold" {
+  description = "Number of consecutive successful health checks before considering target healthy"
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.health_check_healthy_threshold >= 2 && var.health_check_healthy_threshold <= 10
+    error_message = "Healthy threshold must be between 2 and 10."
+  }
+}
+
+variable "health_check_unhealthy_threshold" {
+  description = "Number of consecutive failed health checks before considering target unhealthy"
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.health_check_unhealthy_threshold >= 2 && var.health_check_unhealthy_threshold <= 10
+    error_message = "Unhealthy threshold must be between 2 and 10."
+  }
+}
+
+# Deregistration Delay
+variable "deregistration_delay" {
+  description = "Time (seconds) to wait for in-flight requests to complete before deregistering a target"
+  type        = number
+  default     = 300
+
+  validation {
+    condition     = var.deregistration_delay >= 0 && var.deregistration_delay <= 3600
+    error_message = "Deregistration delay must be between 0 and 3600 seconds."
+  }
+}

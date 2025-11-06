@@ -17,6 +17,7 @@
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_alb"></a> [alb](#module\_alb) | app.terraform.io/hashi-demos-apj/alb/aws | ~> 10.1.0 |
 | <a name="module_ec2_nginx"></a> [ec2\_nginx](#module\_ec2\_nginx) | app.terraform.io/hashi-demos-apj/ec2-instance/aws | ~> 6.1.4 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | app.terraform.io/hashi-demos-apj/vpc/aws | ~> 6.5.0 |
 
@@ -24,6 +25,7 @@
 
 | Name | Type |
 |------|------|
+| [aws_security_group.alb](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group.ec2_nginx](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_ami.amazon_linux_2023](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
@@ -32,10 +34,17 @@
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_alb_internal"></a> [alb\_internal](#input\_alb\_internal) | Whether the ALB is internal (true) or internet-facing (false) | `bool` | `false` | no |
 | <a name="input_ami_id"></a> [ami\_id](#input\_ami\_id) | AMI ID for EC2 instances (defaults to latest Amazon Linux 2023 if not specified) | `string` | `""` | no |
 | <a name="input_availability_zones"></a> [availability\_zones](#input\_availability\_zones) | List of availability zones for multi-AZ deployment | `list(string)` | <pre>[<br/>  "ap-southeast-2a",<br/>  "ap-southeast-2b"<br/>]</pre> | no |
+| <a name="input_deregistration_delay"></a> [deregistration\_delay](#input\_deregistration\_delay) | Time (seconds) to wait for in-flight requests to complete before deregistering a target | `number` | `300` | no |
 | <a name="input_enable_nat_gateway"></a> [enable\_nat\_gateway](#input\_enable\_nat\_gateway) | Enable NAT Gateway for private subnet outbound connectivity | `bool` | `true` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name for resource tagging | `string` | `"sandbox"` | no |
+| <a name="input_health_check_healthy_threshold"></a> [health\_check\_healthy\_threshold](#input\_health\_check\_healthy\_threshold) | Number of consecutive successful health checks before considering target healthy | `number` | `2` | no |
+| <a name="input_health_check_interval"></a> [health\_check\_interval](#input\_health\_check\_interval) | Interval between health checks (seconds) | `number` | `30` | no |
+| <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | Path for ALB health check | `string` | `"/"` | no |
+| <a name="input_health_check_timeout"></a> [health\_check\_timeout](#input\_health\_check\_timeout) | Timeout for health check (seconds) | `number` | `5` | no |
+| <a name="input_health_check_unhealthy_threshold"></a> [health\_check\_unhealthy\_threshold](#input\_health\_check\_unhealthy\_threshold) | Number of consecutive failed health checks before considering target unhealthy | `number` | `2` | no |
 | <a name="input_instance_count"></a> [instance\_count](#input\_instance\_count) | Number of EC2 instances to create | `number` | `1` | no |
 | <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | EC2 instance type for nginx web servers | `string` | `"t3.micro"` | no |
 | <a name="input_key_name"></a> [key\_name](#input\_key\_name) | EC2 key pair name for SSH access (optional) | `string` | `""` | no |
@@ -50,6 +59,11 @@
 
 | Name | Description |
 |------|-------------|
+| <a name="output_alb_arn"></a> [alb\_arn](#output\_alb\_arn) | ARN of the Application Load Balancer |
+| <a name="output_alb_dns_name"></a> [alb\_dns\_name](#output\_alb\_dns\_name) | DNS name of the Application Load Balancer (use this to access the application) |
+| <a name="output_alb_security_group_id"></a> [alb\_security\_group\_id](#output\_alb\_security\_group\_id) | ID of the ALB security group |
+| <a name="output_alb_target_group_arns"></a> [alb\_target\_group\_arns](#output\_alb\_target\_group\_arns) | ARNs of the ALB target groups |
+| <a name="output_alb_zone_id"></a> [alb\_zone\_id](#output\_alb\_zone\_id) | Zone ID of the Application Load Balancer |
 | <a name="output_ami_id_used"></a> [ami\_id\_used](#output\_ami\_id\_used) | AMI ID used for EC2 instances |
 | <a name="output_ec2_instance_ids"></a> [ec2\_instance\_ids](#output\_ec2\_instance\_ids) | IDs of EC2 nginx instances |
 | <a name="output_ec2_private_dns"></a> [ec2\_private\_dns](#output\_ec2\_private\_dns) | Private DNS names of EC2 nginx instances |

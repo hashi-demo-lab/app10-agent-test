@@ -82,3 +82,37 @@ output "ami_id_used" {
   description = "AMI ID used for EC2 instances"
   value       = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023.id
 }
+
+# ==============================================================================
+# Phase 4: Application Load Balancer Outputs (User Story 2)
+# ==============================================================================
+
+# ALB DNS Name (Primary Access Endpoint)
+output "alb_dns_name" {
+  description = "DNS name of the Application Load Balancer (use this to access the application)"
+  value       = module.alb.dns_name
+}
+
+# ALB ARN
+output "alb_arn" {
+  description = "ARN of the Application Load Balancer"
+  value       = module.alb.arn
+}
+
+# ALB Zone ID
+output "alb_zone_id" {
+  description = "Zone ID of the Application Load Balancer"
+  value       = module.alb.zone_id
+}
+
+# Target Group ARNs
+output "alb_target_group_arns" {
+  description = "ARNs of the ALB target groups"
+  value       = module.alb.target_groups
+}
+
+# ALB Security Group ID
+output "alb_security_group_id" {
+  description = "ID of the ALB security group"
+  value       = aws_security_group.alb.id
+}
