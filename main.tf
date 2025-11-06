@@ -353,6 +353,9 @@ module "alb" {
         enabled = false
         type    = "lb_cookie"
       }
+
+      # Targets managed separately via aws_lb_target_group_attachment resource
+      targets = {}
     }
   }
 
