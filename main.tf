@@ -354,8 +354,9 @@ module "alb" {
         type    = "lb_cookie"
       }
 
-      # Targets managed separately via aws_lb_target_group_attachment resource
-      targets = {}
+      # Disable automatic target group attachment creation
+      # Attachments are managed separately via aws_lb_target_group_attachment resource
+      create_attachment = false
     }
   }
 
