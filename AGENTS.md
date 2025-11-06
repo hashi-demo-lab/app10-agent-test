@@ -28,15 +28,15 @@ You are a specialized Terraform code generation assistant with access to Terrafo
 
 The development process follows these distinct phases, each with specific commands and outputs:
 
-| Phase | Command | Purpose | Inputs | Outputs |
-|-------|---------|---------|--------|---------|
-| **Phase 0** | `/speckit.specify` | Create feature specifications from requirements | Feature description | `spec.md`, checklist template |
-| **Phase 0** | `/speckit.clarify` | Resolve specification ambiguities | Ambiguous `spec.md` | Updated `spec.md` with clarifications |
-| **Phase 0** | `/speckit.checklist` | Validate requirement quality | `spec.md` | `checklists/*.md` (requirements quality tests) |
-| **Phase 1** | `/speckit.plan` | Design technical implementation | `spec.md`, `constitution.md` | `plan.md`, `data-model.md`, contracts/ |
-| **Phase 1** | `/speckit.tasks` | Generate actionable task list | `plan.md` | `tasks.md` |
-| **Phase 2** | `/speckit.analyze` | Validate cross-artifact consistency | `spec.md`, `plan.md`, `tasks.md` | Analysis report (read-only) |
-| **Phase 3** | `/speckit.implement` | Execute implementation | `plan.md`, `tasks.md` | Production code |
+| Phase       | Command              | Purpose                                         | Inputs                           | Outputs                                        |
+| ----------- | -------------------- | ----------------------------------------------- | -------------------------------- | ---------------------------------------------- |
+| **Phase 0** | `/speckit.specify`   | Create feature specifications from requirements | Feature description              | `spec.md`, checklist template                  |
+| **Phase 0** | `/speckit.clarify`   | Resolve specification ambiguities               | Ambiguous `spec.md`              | Updated `spec.md` with clarifications          |
+| **Phase 0** | `/speckit.checklist` | Validate requirement quality                    | `spec.md`                        | `checklists/*.md` (requirements quality tests) |
+| **Phase 1** | `/speckit.plan`      | Design technical implementation                 | `spec.md`, `constitution.md`     | `plan.md`, `data-model.md`, contracts/         |
+| **Phase 1** | `/speckit.tasks`     | Generate actionable task list                   | `plan.md`                        | `tasks.md`                                     |
+| **Phase 2** | `/speckit.analyze`   | Validate cross-artifact consistency             | `spec.md`, `plan.md`, `tasks.md` | Analysis report (read-only)                    |
+| **Phase 3** | `/speckit.implement` | Execute implementation                          | `plan.md`, `tasks.md`            | Production code                                |
 
 ## Core Responsibilities
 
@@ -155,7 +155,7 @@ The development process follows these distinct phases, each with specific comman
 3. Generate supporting artifacts:
    - `data-model.md`: Entity definitions and relationships
    - `contracts/`: API/module contracts
-   - `research.md`: Decisions and alternatives considered. **Important** For AWS infrastructure use aws-security-advisor subagent. When performing research multiple subagents can be used concurrently for isolation and performance.
+   - `research.md`: Decisions and alternatives considered. **Important** For AWS infrastructure use aws-security-advisor subagent. When performing research multiple subagents can be used concurrently for isolation and performance. If you need to check Terraform coding style guides you have access to the terraform-style-guide skill. Wehn research modules via MCP you can use a subagent.
 
 **Key Terraform Planning**:
 
@@ -265,7 +265,7 @@ The development process follows these distinct phases, each with specific comman
    - `outputs.tf`: Output exports
    - `provider.tf`: Provider and configurations
    - `terraform.tf`: Terraform block, backend configuration for testing
-   - `override.tf`: Terraform block, backend configuration for testing in a HCP Terraform workspace and project. Import ensure sandbox_<> project is utlised 
+   - `override.tf`: Terraform block, backend configuration for testing in a HCP Terraform workspace and project. Import ensure sandbox\_<> project is utlised
    - `sandbox.auto.tfvars.example`: An example variables file for the user to populate.
    - `sandbox.auto.tfvars`: An variables file for the user/ai agent to populate for terraform cli testing using cloud backend.
 3. Set up project infrastructure:
@@ -309,7 +309,7 @@ variable "var_name" {
   description = "Clear description of the variable's purpose"
   type        = appropriate_type
   default     = value  # Only if appropriate
-  
+
   validation {
     condition     = validation_rule
     error_message = "Helpful error message"
@@ -372,7 +372,7 @@ output "output_name" {
 ```hcl
 terraform {
   required_version = ">= 1.8"
-  
+
   required_providers {
     # List all required providers with version constraints
     provider_name = {
@@ -380,7 +380,7 @@ terraform {
       version = "~> X.Y"
     }
   }
-  
+
   # DO NOT include backend configuration in this file
 }
 ```
@@ -392,9 +392,11 @@ terraform {
 3. **`override.tf`**: Use this for specifying the HCP Cloud backend for testing, as shown in the example below.
 
 These files are for testing using the Terraform CLI and will result in a remote HCP Terraform run.
+
 ### Important: user the override.tf to specify a cloud backend for sandbox testing without issues
 
 To get the current repo GITHUB_REPO_NAME you can use the following command
+
 ```bash
 gh repo view --json name -q .name
 ```
@@ -407,7 +409,7 @@ terraform {
       name = "sandbox_<GITHUB_REPO_NAME>"  # Replace with actual repo name
       project = "<PROJECT_NAME>"  # Replace with actual project name
     }
-    
+
   }
 }
 ```
@@ -464,7 +466,7 @@ If MCP tools fail or return no results:
 
 - You MUST install or update the pre-commit framework if it is not already present.
 - You MUST configure `.git/hooks/pre-commit` to use the pre-commit framework.
-- The `.pre-commit-config.yaml` file is expected to exist in the repository. 
+- The `.pre-commit-config.yaml` file is expected to exist in the repository.
 - Pre-commit hooks SHOULD include `terraform_fmt`, `terraform_docs`, `terraform_validate`, `terraform_tflint`, and `checkov`.
 
 **Pre-commit Hook Configuration**:
@@ -584,6 +586,7 @@ terraform {
 - Upon successful testing, you MUST create identical variables in the sandbox workspace
 
 **Example Variable Handling**:
+
 ```hcl
 # From variables.tf in feature/* branch
 variable "environment" {
@@ -653,29 +656,34 @@ variable "database_password" {
 - Common testing issues and resolutions MUST be documented
 
 **README Testing Section Template**:
+
 ```markdown
 ## Testing
 
 This infrastructure code has been validated using ephemeral HCP Terraform workspaces.
 
 ### Prerequisites
+
 - HCP Terraform organization and project access
 - Required variable values (see terraform.tfvars.example)
 - Terraform MCP server configured
 
 ### Testing Process
+
 1. Ephemeral workspace created: `sandbox_<GITHUB_REPO_NAME>`
 2. Project specified in override.tf terraform block
-2. Variables configured from terraform.tfvars.example
-3. Terraform plan executed successfully
-4. Terraform apply completed without errors
+3. Variables configured from terraform.tfvars.example
+4. Terraform plan executed successfully
+5. Terraform apply completed without errors
 
 ### Required Variables
+
 - `environment`: Deployment environment
 - `vpc_cidr`: VPC CIDR block for networking
 - (Additional variables as identified)
 
 ### Common Issues
+
 - (Document any issues encountered during testing)
 ```
 
@@ -708,7 +716,7 @@ This infrastructure code has been validated using ephemeral HCP Terraform worksp
 **During `/speckit.specify`**
 
 - Ask clarifying questions about infrastructure needs
-- Search registry proactively for relevant modules,  when looking up modules via MCP use a subagent for concurrent execution.
+- Search registry proactively for relevant modules, when looking up modules via MCP use a subagent for concurrent execution.
 - Present findings with rationale and alternatives
 - Create clear, testable requirements in spec.md
 
@@ -769,7 +777,7 @@ This infrastructure code has been validated using ephemeral HCP Terraform worksp
 
 # credentials issues
 
-* If Terraform is failing with credentials problems, check you are in the correct HCP Terraform project
-The default project should be sandbox.
+- If Terraform is failing with credentials problems, check you are in the correct HCP Terraform project
+  The default project should be sandbox.
 
-* If you need to fix code and perform a new run as your using CLI workspaces run, you need to use Terraform cli again to ensure the changes are updated on the HCP Terraform workspace
+- If you need to fix code and perform a new run as your using CLI workspaces run, you need to use Terraform cli again to ensure the changes are updated on the HCP Terraform workspace

@@ -38,7 +38,15 @@
       "Bash(cat:*)",
       "Bash(env)",
       "Bash(git log:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Skill(github-speckit-tester)",
+      "Skill(terraform-style-guide)",
+      "Skill(terraform-test)",
+      "Skill(terraform-stacks)",
+      "mcp__aws-knowledge-mcp-server__aws___search_documentation",
+      "mcp__terraform__get_latest_provider_version",
+      "mcp__aws-knowledge-mcp-server__aws___get_regional_availability",
+      "mcp__aws-knowledge-mcp-server__aws___read_documentation"
     ]
   },
   "enableAllProjectMcpServers": true,
