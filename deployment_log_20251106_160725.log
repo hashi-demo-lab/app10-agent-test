@@ -1,0 +1,166 @@
+================================================================================
+DEPLOYMENT LOG - EC2 Nginx with ALB Infrastructure
+================================================================================
+
+Deployment Date: $(date)
+Feature Branch: 001-ec2-nginx-alb
+HCP Terraform Organization: hashi-demos-apj
+HCP Terraform Workspace: sandbox_app10-agent-test
+HCP Terraform Project: sandbox
+AWS Region: ap-southeast-2
+
+================================================================================
+INFRASTRUCTURE DEPLOYED
+================================================================================
+
+Phase 1: Setup
+- Created feature branch: 001-ec2-nginx-alb
+- Initialized Terraform configuration
+- Configured pre-commit hooks
+
+Phase 2: Foundational Infrastructure (VPC and Networking)
+- VPC ID: vpc-0d3d1ea58e7c72e15
+- VPC CIDR: 10.0.0.0/16
+- Availability Zones: ap-southeast-2a, ap-southeast-2b
+- Public Subnets: subnet-04cf91f3280fd4370, subnet-06a2288b65510c932
+- Private Subnets: subnet-06866c76fcbf6c119, subnet-0e2511abcf3d4adfa
+- NAT Gateway: nat-0f30e677eddfe5ce4 (Public IP: 13.238.107.250)
+- Internet Gateway: igw-0ebcb6dd2176bf373
+
+Phase 3: EC2 Nginx Web Server
+- EC2 Instance ID: i-024a7273e887adb29
+- Instance Type: t3.micro
+- AMI: ami-0330d798dcf2f1753 (Amazon Linux 2023)
+- Private IP: 10.0.11.211
+- Security Group: sg-0d583a7bbbd9428b6
+- Placement: ap-southeast-2a (private subnet)
+- User Data: Automated nginx installation with custom HTML
+
+Phase 4: Application Load Balancer
+- ALB Name: nginx-web-server-sandbox
+- ALB ARN: arn:aws:elasticloadbalancing:ap-southeast-2:855831148133:loadbalancer/app/nginx-web-server-sandbox/7bce864a45992422
+- ALB DNS: nginx-web-server-sandbox-641122927.ap-southeast-2.elb.amazonaws.com
+- ALB Zone ID: Z1GM3OXH4ZPM65
+- Security Group: sg-01a5981a7c2606959
+- Target Group ARN: arn:aws:elasticloadbalancing:ap-southeast-2:855831148133:targetgroup/nginx-20251106050015276100000005/c6a736b1bcef36dd
+- Health Check: HTTP / (30s interval, 5s timeout, 2/2 thresholds)
+
+================================================================================
+FUNCTIONAL REQUIREMENTS IMPLEMENTED
+================================================================================
+
+✅ FR-001: Provision EC2 in ap-southeast-2
+✅ FR-002: Configure instances with nginx web server
+✅ FR-003: Serve custom HTML page with instance metadata
+✅ FR-005: Configure ALB for load distribution
+✅ FR-006: Deploy across at least 2 availability zones
+✅ FR-007: Configure health checks with appropriate thresholds
+✅ FR-012: Tag all resources appropriately for cost tracking
+✅ FR-013: Enable instance accessibility (via ALB)
+✅ FR-014: Output ALB DNS endpoint for accessing the application
+
+================================================================================
+ACCESS INFORMATION
+================================================================================
+
+Application URL: http://nginx-web-server-sandbox-641122927.ap-southeast-2.elb.amazonaws.com/
+
+HCP Terraform Workspace: https://app.terraform.io/app/hashi-demos-apj/workspaces/sandbox_app10-agent-test
+
+================================================================================
+VALIDATION RESULTS
+================================================================================
+
+✅ Terraform Plan: Successful (9 resources planned)
+✅ Terraform Apply: Successful (30 resources created)
+✅ ALB Health Check: Passing
+✅ HTTP Response: 200 OK
+✅ Nginx Service: Running
+✅ Instance Metadata: Correctly displayed in HTML
+
+Sample Response:
+- Instance ID: i-024a7273e887adb29
+- Availability Zone: ap-southeast-2a
+- Private IP: 10.0.11.211
+- Environment: sandbox
+- Project: nginx-web-server
+
+================================================================================
+COST ESTIMATION
+================================================================================
+
+Estimated Monthly Cost: $23.69/mo
+- 2 resources estimated
+- NAT Gateway: ~$32.85/mo (continuous usage)
+- Application Load Balancer: ~$16.20/mo
+- EC2 t3.micro: ~$7.30/mo
+- Data Transfer: Variable
+
+Note: Actual costs may vary based on usage
+
+================================================================================
+SECURITY CONFIGURATION
+================================================================================
+
+✅ EC2 instances deployed in private subnets
+✅ EC2 security group restricted to ALB traffic only
+✅ ALB deployed in public subnets with internet access
+✅ NAT Gateway enables outbound internet for package updates
+✅ All egress traffic from EC2 allowed for updates
+✅ EBS encryption enabled
+✅ Security group rules documented with tfsec ignore annotations
+
+================================================================================
+MODULES USED
+================================================================================
+
+1. VPC Module
+   - Source: app.terraform.io/hashi-demos-apj/vpc/aws
+   - Version: ~> 6.5.0
+
+2. EC2 Instance Module
+   - Source: app.terraform.io/hashi-demos-apj/ec2-instance/aws
+   - Version: ~> 6.1.4
+
+3. ALB Module
+   - Source: app.terraform.io/hashi-demos-apj/alb/aws
+   - Version: ~> 10.1.0
+
+================================================================================
+ISSUES ENCOUNTERED AND RESOLVED
+================================================================================
+
+1. Issue: Pre-commit tflint failure - missing "Application" tag
+   Resolution: Added "Application" tag to common_tags in locals.tf
+
+2. Issue: ALB module target group attachment error - "Missing required argument: target_id"
+   Resolution: Set create_attachment = false in target group configuration
+   and managed attachments separately via aws_lb_target_group_attachment resource
+
+3. Issue: SSH authentication failure when pushing to GitHub
+   Resolution: Changed git remote from SSH to HTTPS protocol
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Monitor infrastructure costs in AWS Cost Explorer
+2. Review ALB access logs (currently disabled for cost optimization)
+3. Consider implementing HTTPS with ACM certificate (FR-015 deferred)
+4. Implement Auto Scaling Group for production workloads (Phase 5)
+5. Set up CloudWatch alarms for monitoring
+6. Review and approve pull request for feature branch
+7. Plan infrastructure cleanup/destruction
+
+================================================================================
+TERRAFORM STATE
+================================================================================
+
+State Management: HCP Terraform (Remote)
+Workspace Auto-Apply: Disabled (manual approval required)
+Terraform Version: 1.13.5
+AWS Provider Version: 6.19.0
+
+================================================================================
+END OF DEPLOYMENT LOG
+================================================================================
