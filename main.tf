@@ -353,14 +353,6 @@ module "alb" {
         enabled = false
         type    = "lb_cookie"
       }
-
-      # Attach EC2 instances as targets
-      targets = {
-        for idx, instance in module.ec2_nginx : "nginx-${idx}" => {
-          target_id = instance.id
-          port      = 80
-        }
-      }
     }
   }
 
@@ -383,4 +375,13 @@ module "alb" {
       Name = "${var.project_name}-${var.environment}-alb"
     }
   )
+}
+
+# Attach EC2 instances to ALB target group
+resource "aws_lb_target_group_attachment" "nginx" {
+  count = var.instance_count
+
+  target_group_arn = module.alb.target_groups["nginx"].arn
+  target_id        = module.ec2_nginx[count.index].id
+  port             = 80
 }
